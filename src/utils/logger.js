@@ -25,6 +25,47 @@ export const ErrorIds = {
 };
 
 /**
+ * Normalizes an error to an Error object
+ */
+export const normalizeError = (error) =>
+  error instanceof Error ? error : new Error(String(error));
+
+/**
+ * Safely reads from localStorage with error handling
+ * @template T
+ * @param {string} key - The localStorage key
+ * @param {T} defaultValue - Default value if read fails
+ * @param {string} errorId - Error ID for logging
+ * @param {(value: string) => T} [parser] - Optional parser function
+ * @returns {T} The parsed value or defaultValue
+ */
+export const readLocalStorage = (key, defaultValue, errorId, parser) => {
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      return parser ? parser(saved) : saved;
+    }
+  } catch (error) {
+    logError(errorId, normalizeError(error), { operation: `read_${key}` });
+  }
+  return defaultValue;
+};
+
+/**
+ * Safely writes to localStorage with error handling
+ * @param {string} key - The localStorage key
+ * @param {string} value - The value to write
+ * @param {string} errorId - Error ID for logging
+ */
+export const writeLocalStorage = (key, value, errorId) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    logError(errorId, normalizeError(error), { operation: `save_${key}` });
+  }
+};
+
+/**
  * Logs an error with structured data
  * In development: logs to console with full details
  * In production: can be extended to send to error tracking service
@@ -34,8 +75,9 @@ export const ErrorIds = {
  * @param context - Additional context about the error
  */
 export const logError = (errorId, error, context = {}) => {
-  const errorMessage = error instanceof Error ? error.message : error;
-  const errorStack = error instanceof Error ? error.stack : undefined;
+  const normalizedError = normalizeError(error);
+  const errorMessage = normalizedError.message;
+  const errorStack = normalizedError.stack;
 
   const errorData = {
     errorId,
@@ -62,7 +104,7 @@ export const logError = (errorId, error, context = {}) => {
   /*
   if (import.meta.env.PROD) {
     // Example with Sentry:
-    // Sentry.captureException(error instanceof Error ? error : new Error(errorMessage), {
+    // Sentry.captureException(normalizedError, {
     //   tags: { errorId },
     //   extra: context
     // });

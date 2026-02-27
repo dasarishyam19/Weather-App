@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useWeatherContext } from '../context/useWeatherContext';
+import { logError, ErrorIds } from '../utils/logger';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -16,6 +17,25 @@ const groupByDay = (list) => {
 const ForecastSection = () => {
   const { forecast } = useWeatherContext();
   if (!forecast) return null;
+
+  // Validate forecast.list structure
+  if (
+    !forecast.list ||
+    !Array.isArray(forecast.list) ||
+    forecast.list.length === 0
+  ) {
+    logError(
+      ErrorIds.VALIDATION_ERROR,
+      new Error('Invalid forecast data structure'),
+      {
+        hasList: 'list' in forecast,
+        isListArray: Array.isArray(forecast.list),
+        listLength: forecast.list?.length,
+        forecastKeys: Object.keys(forecast),
+      }
+    );
+    return null;
+  }
 
   const days = groupByDay(forecast.list);
 

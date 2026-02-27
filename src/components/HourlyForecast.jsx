@@ -1,20 +1,71 @@
 import { motion } from 'framer-motion';
 import { useWeatherContext } from '../context/useWeatherContext';
+import { logError, ErrorIds } from '../utils/logger';
+import { useEffect } from 'react';
 
 const formatHour = (dtTxt, tz) => {
   const unix = new Date(dtTxt).getTime() / 1000;
-  const d = new Date((unix + tz) * 1000);
-  const h = d.getUTCHours();
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 || 12;
-  return `${h12}${ampm}`;
+  const cityTime = new Date((unix + tz) * 1000);
+  return cityTime.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
 };
 
 const HourlyForecast = () => {
   const { forecast, current } = useWeatherContext();
+
+  // Log if weather data is missing
+  useEffect(() => {
+    if (current && !current.weather) {
+      logError(
+        ErrorIds.VALIDATION_ERROR,
+        new Error('API response missing weather data'),
+        {
+          city: current.name,
+          responseKeys: Object.keys(current),
+        }
+      );
+    }
+  }, [current]);
+
   if (!forecast || !current) return null;
 
-  const tz = current.timezone || 0;
+  // Validate timezone data
+  const tz = current.timezone;
+  if (tz === undefined || tz === null) {
+    logError(
+      ErrorIds.VALIDATION_ERROR,
+      new Error('Missing timezone in weather data'),
+      {
+        city: current.name,
+        hasTimezone: 'timezone' in current,
+        timezoneValue: tz,
+      }
+    );
+  }
+  const safeTz = tz || 0;
+
+  // Validate forecast.list structure
+  if (
+    !forecast.list ||
+    !Array.isArray(forecast.list) ||
+    forecast.list.length === 0
+  ) {
+    logError(
+      ErrorIds.VALIDATION_ERROR,
+      new Error('Invalid forecast data structure'),
+      {
+        hasList: 'list' in forecast,
+        isListArray: Array.isArray(forecast.list),
+        listLength: forecast.list?.length,
+        forecastKeys: Object.keys(forecast),
+      }
+    );
+    return null;
+  }
+
   const hourly = forecast.list.slice(0, 9);
 
   return (
@@ -35,7 +86,7 @@ const HourlyForecast = () => {
                 transition={{ duration: 0.35, delay: i * 0.05 }}
               >
                 <div className="hourly-time">
-                  {i === 0 ? 'Now' : formatHour(item.dt_txt, tz)}
+                  {i === 0 ? 'Now' : formatHour(item.dt_txt, safeTz)}
                 </div>
                 <img src={iconUrl} alt={description} className="hourly-icon" />
                 <div className="hourly-temp">{Math.round(item.main.temp)}°</div>
