@@ -1,5 +1,64 @@
 import React from 'react';
+import { FiAlertTriangle } from 'react-icons/fi';
 import { logError, ErrorIds } from '../utils/logger';
+
+const containerStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '400px',
+  padding: '2rem',
+  textAlign: 'center',
+};
+
+const iconStyle = {
+  marginBottom: '1rem',
+};
+
+const titleStyle = {
+  fontSize: '1.5rem',
+  marginBottom: '1rem',
+  color: 'var(--text-primary)',
+};
+
+const messageStyle = {
+  marginBottom: '1.5rem',
+  color: 'var(--text-secondary)',
+};
+
+const errorDetailStyle = {
+  display: 'block',
+  marginTop: '1rem',
+  fontSize: '0.875rem',
+  color: '#ff6b6b',
+};
+
+const buttonsContainerStyle = {
+  display: 'flex',
+  gap: '1rem',
+};
+
+const buttonStyle = {
+  padding: '0.75rem 1.5rem',
+  borderRadius: '8px',
+  cursor: 'pointer',
+  fontSize: '1rem',
+};
+
+const primaryButtonStyle = {
+  ...buttonStyle,
+  background: 'var(--accent-1)',
+  color: 'white',
+  border: 'none',
+};
+
+const secondaryButtonStyle = {
+  ...buttonStyle,
+  background: 'transparent',
+  color: 'var(--text-primary)',
+  border: '1px solid var(--text-muted)',
+};
 
 /**
  * Error Boundary Component
@@ -17,12 +76,10 @@ class ErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
-    // Update state so the next render will show the fallback UI
     return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log the error to our logging service
     logError(ErrorIds.VALIDATION_ERROR, error, {
       componentStack: errorInfo.componentStack,
       errorBoundary: true,
@@ -35,87 +92,29 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      // Use custom fallback if provided, otherwise use default
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
       return (
-        <div
-          className="error-fallback"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '400px',
-            padding: '2rem',
-            textAlign: 'center',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '4rem',
-              marginBottom: '1rem',
-            }}
-          >
-            ⚠️
-          </div>
-          <h1
-            style={{
-              fontSize: '1.5rem',
-              marginBottom: '1rem',
-              color: 'var(--text-primary)',
-            }}
-          >
-            Something went wrong
-          </h1>
-          <p
-            style={{
-              marginBottom: '1.5rem',
-              color: 'var(--text-secondary)',
-            }}
-          >
+        <div className="error-fallback" style={containerStyle}>
+          <FiAlertTriangle size={64} style={iconStyle} />
+          <h1 style={titleStyle}>Something went wrong</h1>
+          <p style={messageStyle}>
             We're sorry, but the weather app encountered an unexpected error.
             {import.meta.env.DEV && this.state.error && (
-              <span
-                style={{
-                  display: 'block',
-                  marginTop: '1rem',
-                  fontSize: '0.875rem',
-                  color: '#ff6b6b',
-                }}
-              >
+              <span style={errorDetailStyle}>
                 Error: {this.state.error.message}
               </span>
             )}
           </p>
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <button
-              onClick={this.handleReset}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: 'var(--accent-1)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-              }}
-            >
+          <div style={buttonsContainerStyle}>
+            <button onClick={this.handleReset} style={primaryButtonStyle}>
               Try Again
             </button>
             <button
               onClick={() => window.location.reload()}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: 'transparent',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--text-muted)',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-              }}
+              style={secondaryButtonStyle}
             >
               Reload Page
             </button>

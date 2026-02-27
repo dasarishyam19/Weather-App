@@ -9,12 +9,16 @@ import {
   WiDaySunny,
 } from 'react-icons/wi';
 import { FiEye } from 'react-icons/fi';
-
-const pad = (n) => String(n).padStart(2, '0');
+import { logError, ErrorIds } from '../utils/logger';
+import { useEffect } from 'react';
 
 const formatTime = (unix, tz) => {
-  const d = new Date((unix + tz) * 1000);
-  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+  const cityTime = new Date((unix + tz) * 1000);
+  return cityTime.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
 };
 
 const Detail = ({ icon, label, value, delay }) => (
@@ -32,9 +36,38 @@ const Detail = ({ icon, label, value, delay }) => (
 
 const WeatherDetails = () => {
   const { current, units } = useWeatherContext();
+
+  // Log if weather data is missing
+  useEffect(() => {
+    if (current && !current.weather) {
+      logError(
+        ErrorIds.VALIDATION_ERROR,
+        new Error('API response missing weather data'),
+        {
+          city: current.name,
+          responseKeys: Object.keys(current),
+        }
+      );
+    }
+  }, [current]);
+
   if (!current) return null;
 
-  const tz = current.timezone || 0;
+  // Validate timezone data
+  const tz = current.timezone;
+  if (tz === undefined || tz === null) {
+    logError(
+      ErrorIds.VALIDATION_ERROR,
+      new Error('Missing timezone in weather data'),
+      {
+        city: current.name,
+        hasTimezone: 'timezone' in current,
+        timezoneValue: tz,
+      }
+    );
+  }
+  const safeTz = tz || 0;
+
   const speedUnit = units === 'metric' ? 'm/s' : 'mph';
 
   const visibilityUnit = units === 'metric' ? 'km' : 'mi';
@@ -64,12 +97,12 @@ const WeatherDetails = () => {
     {
       icon: <WiSunrise />,
       label: 'Sunrise',
-      value: formatTime(current.sys?.sunrise, tz),
+      value: formatTime(current.sys?.sunrise, safeTz),
     },
     {
       icon: <WiSunset />,
       label: 'Sunset',
-      value: formatTime(current.sys?.sunset, tz),
+      value: formatTime(current.sys?.sunset, safeTz),
     },
     {
       icon: <WiDaySunny />,

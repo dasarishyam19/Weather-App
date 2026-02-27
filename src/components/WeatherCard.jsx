@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion';
 import { useWeatherContext } from '../context/useWeatherContext';
+import { logError, ErrorIds } from '../utils/logger';
+import { useEffect } from 'react';
 
 const getConditionClass = (weatherMain) => {
   if (!weatherMain) return 'default';
@@ -17,14 +19,31 @@ const getConditionClass = (weatherMain) => {
 const formatDateTime = (timezone) => {
   const now = new Date();
   const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  const local = new Date(utc + timezone * 1000);
-  return (
-    local.toISOString().replace('T', ' ').split(' ')[1]?.substring(0, 5) || ''
-  );
+  const cityTime = new Date(utc + timezone * 1000);
+  return cityTime.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
 };
 
 const WeatherCard = () => {
   const { current, units } = useWeatherContext();
+
+  // Log if weather data is missing
+  useEffect(() => {
+    if (current && !current.weather) {
+      logError(
+        ErrorIds.VALIDATION_ERROR,
+        new Error('API response missing weather data'),
+        {
+          city: current.name,
+          responseKeys: Object.keys(current),
+        }
+      );
+    }
+  }, [current]);
+
   if (!current) return null;
 
   const condClass = getConditionClass(current.weather?.[0]?.main);

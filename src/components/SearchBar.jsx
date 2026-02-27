@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { FiSearch, FiMapPin, FiClock } from 'react-icons/fi';
+import { FiSearch, FiMapPin } from 'react-icons/fi';
 import { searchCities } from '../api/weatherApi';
 import { useWeatherContext } from '../context/useWeatherContext';
-import { logError, ErrorIds } from '../utils/logger';
+import { logError, normalizeError, ErrorIds } from '../utils/logger';
 
 const SearchBar = () => {
   const { loadWeather, loadWeatherByCoords, setError } = useWeatherContext();
@@ -28,13 +28,9 @@ const SearchBar = () => {
         setSuggestions(results);
         setShowDropdown(true);
       } catch (error) {
-        logError(
-          ErrorIds.CITY_SEARCH_FAILED,
-          error instanceof Error ? error : new Error(String(error)),
-          {
-            query: val,
-          }
-        );
+        logError(ErrorIds.CITY_SEARCH_FAILED, normalizeError(error), {
+          query: val,
+        });
         setSuggestions([]);
       }
     }, 350);
@@ -65,14 +61,9 @@ const SearchBar = () => {
         try {
           await loadWeatherByCoords(coords.latitude, coords.longitude);
         } catch (error) {
-          logError(
-            ErrorIds.GEOLOCATION_FAILED,
-            error instanceof Error ? error : new Error(String(error)),
-            {
-              context: 'after_geolocation',
-            }
-          );
-          // Error is already set by loadWeatherByCoords
+          logError(ErrorIds.GEOLOCATION_FAILED, normalizeError(error), {
+            context: 'after_geolocation',
+          });
         } finally {
           setLocating(false);
         }
@@ -83,21 +74,18 @@ const SearchBar = () => {
           message: error.message,
         });
         setLocating(false);
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            setError(
-              'Location access denied. Please enable location permissions.'
-            );
-            break;
-          case error.POSITION_UNAVAILABLE:
-            setError('Location information unavailable.');
-            break;
-          case error.TIMEOUT:
-            setError('Location request timed out. Please try again.');
-            break;
-          default:
-            setError('An unknown error occurred getting your location.');
-        }
+
+        const geolocationErrors = {
+          [error.PERMISSION_DENIED]:
+            'Location access denied. Please enable location permissions.',
+          [error.POSITION_UNAVAILABLE]: 'Location information unavailable.',
+          [error.TIMEOUT]: 'Location request timed out. Please try again.',
+        };
+
+        setError(
+          geolocationErrors[error.code] ||
+            'An unknown error occurred getting your location.'
+        );
       },
       { timeout: 8000 }
     );
@@ -167,7 +155,7 @@ const SearchBar = () => {
         <div className="search-dropdown">
           {suggestions.map((s) => (
             <div
-              key={`${s.lat}-${s.lon}`}
+              key={`${s.lat}-${s.lon}-${s.name}-${s.country}`}
               className="search-dropdown-item"
               onClick={() => handleSelect(`${s.name},${s.country}`)}
             >
