@@ -1,8 +1,9 @@
 import { WeatherProvider } from './context/WeatherContext';
 import SearchBar from './components/SearchBar';
 import ThemeToggle from './components/ThemeToggle';
-import { useWeatherContext } from './context/WeatherContext';
+import { useWeatherContext } from './context/useWeatherContext';
 import Home from './pages/Home';
+import ErrorBoundary from './components/ErrorBoundary';
 import './styles/index.css';
 
 const Header = () => {
@@ -29,9 +30,11 @@ const AppInner = () => (
 );
 
 const App = () => (
-  <WeatherProvider>
-    <AppInner />
-  </WeatherProvider>
+  <ErrorBoundary>
+    <WeatherProvider>
+      <AppInner />
+    </WeatherProvider>
+  </ErrorBoundary>
 );
 
 export default App;
